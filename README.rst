@@ -9,8 +9,8 @@ Titlecase
 This filter changes all words to Title Caps, and attempts to be clever
 about SMALL words like a/an/the in the input.
 
-The list of "SMALL words" which are not capped comes from the New York
-Times Manual of Style, plus some others like 'vs' and 'v'.
+The default list of "SMALL words" which are not capped comes from the
+New York Times Manual of Style, plus some others like 'vs' and 'v'.
 
 This is a resurrection of `Stuart Colville's
 titlecase.py <https://muffinresearch.co.uk/titlecasepy-titlecase-in-python/>`__,
@@ -56,6 +56,15 @@ A callback function may also be supplied, which will be called for every word:
 The callback function is supplied with an ``all_caps`` keyword argument, indicating
 whether the entire line of text was entirely capitalized. Returning ``None`` from
 the callback function will allow titlecase to process the word as normal.
+
+A custom list of "SMALL words" may also be supplied, which will not be capped:
+
+.. code-block:: python
+
+    >>> titlecase.titlecase('playing the game "words with friends"', small='a|an|the|with')
+    'Playing the Game "Words with Friends"'
+
+This custom list will override rather than supplement the default "SMALL words" list.
 
 
 Command Line Usage

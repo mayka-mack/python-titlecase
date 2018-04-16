@@ -19,13 +19,9 @@ __version__ = '0.12.0'
 SMALL = 'a|an|and|as|at|but|by|en|for|if|in|of|on|or|the|to|v\.?|via|vs\.?'
 PUNCT = r"""!"“#$%&'‘()*+,\-–‒—―./:;?@[\\\]_`{|}~"""
 
-SMALL_WORDS = re.compile(r'^(%s)$' % SMALL, re.I)
 INLINE_PERIOD = re.compile(r'[a-z][.][a-z]', re.I)
 UC_ELSEWHERE = re.compile(r'[%s]*?[a-zA-Z]+[A-Z]+?' % PUNCT)
 CAPFIRST = re.compile(r"^[%s]*?([A-Za-z])" % PUNCT)
-SMALL_FIRST = re.compile(r'^([%s]*)(%s)\b' % (PUNCT, SMALL), re.I)
-SMALL_LAST = re.compile(r'\b(%s)[%s]?$' % (SMALL, PUNCT), re.I)
-SUBPHRASE = re.compile(r'([:.;?!\-–‒—―][ ])(%s)' % SMALL)
 APOS_SECOND = re.compile(r"^[dol]{1}['‘]{1}[a-z]+(?:['s]{2})?$", re.I)
 UC_INITIALS = re.compile(r"^(?:[A-Z]{1}\.{1}|[A-Z]{1}\.{1}[A-Z]{1})+$")
 MAC_MC = re.compile(r"^([Mm]c|MC)(\w.+)")
@@ -52,28 +48,27 @@ def _mark_immutable(text):
     return ImmutableString(text)
 
 
-def set_small_word_list(small=SMALL):
-    global SMALL_WORDS
-    global SMALL_FIRST
-    global SMALL_LAST
-    global SUBPHRASE
-    SMALL_WORDS = re.compile(r'^(%s)$' % small, re.I)
-    SMALL_FIRST = re.compile(r'^([%s]*)(%s)\b' % (PUNCT, small), re.I)
-    SMALL_LAST = re.compile(r'\b(%s)[%s]?$' % (small, PUNCT), re.I)
-    SUBPHRASE = re.compile(r'([:.;?!][ ])(%s)' % small)
+def set_small_word_list(small):
+    small_words = re.compile(r'^(%s)$' % small, re.I)
+    small_first = re.compile(r'^([%s]*)(%s)\b' % (PUNCT, small), re.I)
+    small_last = re.compile(r'\b(%s)[%s]?$' % (small, PUNCT), re.I)
+    subphrase = re.compile(r'([:.;?!\-–‒—―][ ])(%s)' % small)
+    return (small_words, small_first, small_last, subphrase)
 
 
-def titlecase(text, callback=None, small_first_last=True):
+def titlecase(text, callback=None, small=SMALL, small_first_last=True):
     """
     Titlecases input text
 
     This filter changes all words to Title Caps, and attempts to be clever
     about *un*capitalizing SMALL words like a/an/the in the input.
 
-    The list of "SMALL words" which are not capped comes from
+    The default list of "SMALL words" which are not capped comes from
     the New York Times Manual of Style, plus 'vs' and 'v'.
 
     """
+
+    small_words, small_first, small_last, subphrase = set_small_word_list(small)
 
     lines = re.split('[\r\n]+', text)
     processed = []
@@ -106,19 +101,20 @@ def titlecase(text, callback=None, small_first_last=True):
             match = MAC_MC.match(word)
             if match:
                 tc_line.append("%s%s" % (match.group(1).capitalize(),
-                                         titlecase(match.group(2),callback,small_first_last)))
+                                         titlecase(match.group(2),callback,
+                                                   small,small_first_last)))
                 continue
 
             if INLINE_PERIOD.search(word) or (not all_caps and UC_ELSEWHERE.match(word)):
                 tc_line.append(word)
                 continue
-            if SMALL_WORDS.match(word):
+            if small_words.match(word):
                 tc_line.append(word.lower())
                 continue
 
             if "/" in word and "//" not in word:
                 slashed = map(
-                    lambda t: titlecase(t,callback,False),
+                    lambda t: titlecase(t,callback,small,False),
                     word.split('/')
                 )
                 tc_line.append("/".join(slashed))
@@ -126,7 +122,7 @@ def titlecase(text, callback=None, small_first_last=True):
 
             if '-' in word:
                 hyphenated = map(
-                    lambda t: titlecase(t,callback,small_first_last),
+                    lambda t: titlecase(t,callback,small,small_first_last),
                     word.split('-')
                 )
                 tc_line.append("-".join(hyphenated))
@@ -140,19 +136,19 @@ def titlecase(text, callback=None, small_first_last=True):
 
         if small_first_last and tc_line:
             if not isinstance(tc_line[0], Immutable):
-                tc_line[0] = SMALL_FIRST.sub(lambda m: '%s%s' % (
+                tc_line[0] = small_first.sub(lambda m: '%s%s' % (
                     m.group(1),
                     m.group(2).capitalize()
                 ), tc_line[0])
 
             if not isinstance(tc_line[-1], Immutable):
-                tc_line[-1] = SMALL_LAST.sub(
+                tc_line[-1] = small_last.sub(
                     lambda m: m.group(0).capitalize(), tc_line[-1]
                 )
 
         result = " ".join(tc_line)
 
-        result = SUBPHRASE.sub(lambda m: '%s%s' % (
+        result = subphrase.sub(lambda m: '%s%s' % (
             m.group(1),
             m.group(2).capitalize()
         ), result)

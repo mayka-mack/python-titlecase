@@ -9,7 +9,7 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
 
-from titlecase import titlecase, set_small_word_list
+from titlecase import titlecase
 
 TEST_DATA = (
     (
@@ -268,20 +268,10 @@ TEST_DATA = (
 
 
 def test_initials_regex():
-    """Test - uppercase initials regex with A.B"""
+    """Test - uppercase initials regex with A.B / A.B. / ABCD"""
     from titlecase import UC_INITIALS
     assert bool(UC_INITIALS.match('A.B')) is True
-
-
-def test_initials_regex_2():
-    """Test - uppercase initials regex with A.B."""
-    from titlecase import UC_INITIALS
     assert bool(UC_INITIALS.match('A.B.')) is True
-
-
-def test_initials_regex_3():
-    """Test - uppercase initials regex with ABCD"""
-    from titlecase import UC_INITIALS
     assert bool(UC_INITIALS.match('ABCD')) is False
 
 
@@ -321,8 +311,8 @@ def test_callback():
 
 def test_set_small_word_list():
     assert titlecase('playing the game "words with friends"') == 'Playing the Game "Words With Friends"'
-    set_small_word_list('a|an|the|with')
-    assert titlecase('playing the game "words with friends"') == 'Playing the Game "Words with Friends"'
+    assert titlecase('playing the game "words with friends"',
+                                       small='a|an|the|with') == 'Playing the Game "Words with Friends"'
 
 
 if __name__ == "__main__":
